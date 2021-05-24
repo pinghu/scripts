@@ -1,0 +1,1 @@
+echo $(( $(zcat *.gz | wc -l) / 4 )) >fastq_size_count

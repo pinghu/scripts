@@ -1,0 +1,113 @@
+###into the metaphlan2 result
+cd /fs/scratch/PYS0226/ar2767/GSS2749/metaphlan3
+source /users/PYS0226/ar2767/.bashrc
+#conda activate mypython2
+ls  *.profile > list
+perl ~/bin/seperate_profile3.pl list  1>summary.1 2>summary.2
+python ~/bin/merge_metaphlan2_tables.py ./relative_abundance/*.profile > metaphlan.relab
+python ~/bin/merge_metaphlan2_tables.py ./estimated_number_of_reads_from_the_clade/*.profile > metaphlan.estimated_count
+python ~/bin/merge_metaphlan2_tables.py ./coverage/*.profile > metaphlan.coverage
+perl ~/bin/filter_ave_10.pl metaphlan.estimated_count
+perl ~/bin/select_data.pl metaphlan.estimated_count 1 metaphlan.estimated_count.10filter >metaphlan.estimated_count.filtered
+perl ../match_group_simple.pl metaphlan.estimated_count.filtered
+perl ~/bin/rearrange_column.pl metaphlan.estimated_count.filtered.ann.xls 1
+./metaphlan.estimated_count.filtered.ann.xls.rearrange.job
+mv metaphlan.estimated_count.filtered.ann.xls.rearranged metaphlan_count_data
+perl ~/bin/seperate_level.pl  metaphlan_count_data
+perl ~/bin/seperate_kingdom.pl metaphlan_count_data
+=========================================================
+perl ~/bin/select_data.pl metaphlan.relab 1 metaphlan.estimated_count.10filter >metaphlan.relab.filtered
+perl ../match_group_simple.pl metaphlan.relab.filtered
+perl ~/bin/rearrange_column.pl metaphlan.relab.filtered.ann.xls 1
+./metaphlan.relab.filtered.ann.xls.rearrange.job
+mv metaphlan.relab.filtered.ann.xls.rearranged metaphlan_relab_data
+perl ~/bin/seperate_level.pl metaphlan_relab_data
+perl ~/bin/seperate_kingdom.pl metaphlan_relab_data
+perl ~/bin/seperate_level.pl metaphlan_relab_data.bacteria
+rm *.job
+
+
+
+Rscript get_paired_wilcox_clean.R metaphlan.relab.ann.xls.rearranged.7 >metaphlan.relab.ann.xls.rearranged.7.stat
+Rscript get_paired_wilcox_clean.R metaphlan.relab.ann.xls.rearranged.6 >metaphlan.relab.ann.xls.rearranged.6.stat
+Rscript get_paired_wilcox_clean.R metaphlan.relab.ann.xls.rearranged.5 >metaphlan.relab.ann.xls.rearranged.5.stat
+Rscript get_paired_wilcox_clean.R metaphlan.relab.ann.xls.rearranged.4 >metaphlan.relab.ann.xls.rearranged.4.stat
+Rscript get_paired_wilcox_clean.R metaphlan.relab.ann.xls.rearranged.3 >metaphlan.relab.ann.xls.rearranged.3.stat
+
+
+
+
+
+#cd /fs/scratch/PYS0226/ar2767/GSS2749/humann3/
+
+
+##############################################################
+conda activate biobakery3
+cd /fs/scratch/PYS0226/ar2767/GSS2749/humann3/
+
+
+
+humann_join_tables --input ./ --output /mnt/G6_2D/project/GSS2749/pathabundance.tsv  --file_name pathabundance.tsv
+perl ~/bin/filter_ave_10.pl pathabundance.tsv
+perl ~/bin/select_data.pl pathabundance.tsv 1 pathabundance.tsv.10filter >pathabundance.filtered.tsv
+grep -v "|" pathabundance.filtered.tsv|grep -v "UNINTEGRATED"|grep -v "UNMAPPED" |sed -e 's|["\/'\'']||g' >pathabundance.community.tsv
+humann_renorm_table --input pathabundance.community.tsv --units relab --output pathabundance.community.relab
+perl ~/bin/get_top_contributor.pl pathabundance.tsv >pathabundance.contributor&
+
+
+humann_join_tables --input ./ --output /mnt/G6_2D/project/GSS2749/pathcoverage.tsv  --file_name pathcoverage.tsv
+perl ~/bin/select_data.pl pathcoverage.tsv 1 pathabundance.tsv.10filter >pathcoverage.filtered.tsv
+grep -v "|" pathcoverage.filter.tsv |  grep -v "UNINTEGRATED"|grep -v "UNMAPPED" |sed -e 's|["\/'\'']||g'  >pathcoverage.community.tsv
+
+
+
+humann_join_tables --input ./ --output genefamily.tsv  --file_name genefamilies.tsv
+perl ~/bin/filter_ave_10.pl genefamily.tsv
+perl ~/bin/select_data.pl genefamily.tsv 1 genefamily.tsv.10filter >genefamily.filter.tsv
+grep -v "|" genefamily.filter.tsv  |grep -v "UNMAPPED"|sed -e 's|["\/'\'']||g' >genefamily.community.tsv
+humann_renorm_table --input genefamily.community.tsv --units relab --output genefamily.community.relab
+perl ~/bin/get_top_contributor.pl genefamily.tsv >genefamily.contributor&
+
+humann_regroup_table -i genefamily.tsv -g uniref90_go -o genefamily.uniref90_go
+humann_regroup_table -i genefamily.tsv -g uniref90_ko -o genefamily.uniref90_ko
+humann_regroup_table -i genefamily.tsv -g uniref90_rxn -o genefamily.uniref90_rxn
+humann_regroup_table -i genefamily.tsv -g uniref90_level4ec -o genefamily.uniref90_level4ec
+humann_regroup_table -i genefamily.tsv -g uniref90_pfam -o genefamily.uniref90_pfam
+humann_regroup_table -i genefamily.tsv -g uniref90_eggnog -o genefamily.uniref90_eggnog
+
+grep -v "|" genefamily.uniref90_go| grep -v "UNINTEGRATED"|grep -v "UNMAPPED"|grep -v "UNGROUPED" |sed -e 's|["\/'\'']||g'  >genefamily.community.uniref90_go
+grep -v "|" genefamily.uniref90_ko| grep -v "UNINTEGRATED"|grep -v "UNMAPPED"|grep -v "UNGROUPED" | sed -e 's|["\/'\'']||g'  >genefamily.community.uniref90_ko
+grep -v "|" genefamily.uniref90_rxn| grep -v "UNINTEGRATED"|grep -v "UNMAPPED" |grep -v "UNGROUPED" |sed -e 's|["\/'\'']||g'  >genefamily.community.uniref90_rxn
+grep -v "|" genefamily.uniref90_level4ec| grep -v "UNINTEGRATED"|grep -v "UNMAPPED" |grep -v "UNGROUPED" |sed -e 's|["\/'\'']||g'  >genefamily.community.uniref90_level4ec
+grep -v "|" genefamily.uniref90_pfam| grep -v "UNINTEGRATED"|grep -v "UNMAPPED" |grep -v "UNGROUPED" |sed -e 's|["\/'\'']||g'  >genefamily.community.uniref90_pfam
+grep -v "|" genefamily.uniref90_eggnog| grep -v "UNINTEGRATED"|grep -v "UNMAPPED" |grep -v "UNGROUPED" |sed -e 's|["\/'\'']||g'  >genefamily.community.uniref90_eggnog
+
+
+perl ~/bin/get_top_contributor.pl genefamily.uniref90_go >genefamily.uniref90_go.contributor&
+perl ~/bin/get_top_contributor.pl genefamily.uniref90_ko >genefamily.uniref90_ko.contributor&
+perl ~/bin/get_top_contributor.pl genefamily.uniref90_rxn >genefamily.uniref90_rxn.contributor&
+perl ~/bin/get_top_contributor.pl genefamily.uniref90_level4ec >genefamily.uniref90_level4ec.contributor
+perl ~/bin/get_top_contributor.pl genefamily.uniref90_pfam >genefamily.uniref90_pfam.contributor
+perl ~/bin/get_top_contributor.pl genefamily.uniref90_eggnog >genefamily.uniref90_eggnog.contributor
+
+humann_renorm_table --input genefamily.community.uniref90_go --units relab --output genefamily.community.uniref90_go.relab
+humann_renorm_table --input genefamily.community.uniref90_ko --units relab --output genefamily.community.uniref90_ko.relab
+humann_renorm_table --input genefamily.community.uniref90_rxn --units relab --output genefamily.community.uniref90_rxn.relab
+humann_renorm_table --input genefamily.community.uniref90_level4ec --units relab --output genefamily.community.uniref90_level4ec.relab
+humann_renorm_table --input genefamily.community.uniref90_pfam --units relab --output genefamily.community.uniref90_pfam.relab
+humann_renorm_table --input genefamily.community.uniref90_eggnog --units relab --output genefamily.community.uniref90_eggnog.relab
+
+#####################################################################
+perl ~/bin/get_count_from_wc.pl result.count >./result.readnum
+perl ~/bin/get_count_from_wc.pl merge.count >./merge.readnum
+perl ~/bin/get_count_from_wc.pl merge2.count >./merge2.readnum
+
+
+################################################################
+cd /fs/scratch/PYS0226/ar2767/GSS2749/kraken/
+merge_metaphlan_tables.py *.report > kraken_fungi18DB_summary
+perl ~/bin/clean_kraken_data.pl kraken_fungi18DB_summary
+perl ~/bin/get_relab_kraken.pl ../count/merge2.readsnum kraken_fungi18DB_summary.clean 1>out 2>err
+ls *.err > err.list
+perl ~/bin/combine_multi_file.pl err.list > kraken.err.combine.xls
+
